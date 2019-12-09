@@ -1,0 +1,2 @@
+installPackage("SimplicialPosets")
+end

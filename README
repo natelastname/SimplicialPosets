@@ -1,0 +1,13 @@
+This is a collection of functions for working with Stanley simplicial poset rings.
+
+To install this package, exectute "M2 install.m2" in the project directory.
+
+After you have it installed, you can include this package by running
+
+loadPackage("SimplicialPosets").
+
+To view the documentation, navigate to the following directory:
+
+~/.Macaulay2/local/share/doc/Macaulay2/SimplicialPosets/html/
+
+Then, open "toc.html" in your web browser.
