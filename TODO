@@ -1,0 +1,13 @@
+- Decide if it would be worth it to cache certain results
+- Decide if more functions are needed (Randomized simplicial posets?)
+- Improve existing functions
+- Fix the warnings when package is installed
+- Write tests for stanleyPosetIdeal
+- Write more tests in general
+- Better variable names used in the ideal returned by stanleyPosetIdeal?
+
+
+
+
+
+
