@@ -71,7 +71,7 @@ upperBounds = (P, a, b) -> (
     OIa := principalFilter'(P, indexElement(P, a));
     OIb := principalFilter'(P, indexElement(P, b));
     -- "*" is the set intersection operator.
-    toList (set(OIa)*set(OIb));
+    toList (set(OIa)*set(OIb))
     );
 
 -- Return the minimal upper bounds of a,b in P.
@@ -180,27 +180,27 @@ stanleyPosetIdeal = method()
 stanleyPosetIdeal Poset := Ideal => P -> (
     
     if not isSimplicial(P) then error "Must be a simplicial poset.";
-    pairsP := apply(toList( set(vertices(P)) ** set(vertices(P)) ), i -> set(i));
-    pairsP = select(pairsP, i -> #i == 2);
-    -- pairsP contains the C(n,2) size 2 subsets of vertices(P).
+    
     ringVars := for i from 0 to #vertices(P)-1 list(getSymbol("x"));    
+    
     syms := for i from 0 to #ringVars-1 list (
     	ringVars#i_(toString(P.GroundSet#i))
     	);
+    
     -- This is the right way to define symbols according to the style guide.
     gndRing := QQ(monoid[syms]);
     syms = gens gndRing;
     gensI := {};
-    for i in pairsP do(	
-	a := first elements(i);
-	b := last elements(i);
-	mubs := toList minUpperBounds(P, first elements(i), last elements(i));	
-	term := (syms#(indexElement(P, a)))*(syms#(indexElement(P,b)));
-		
+    
+    for i in subsets(vertices(P),2) do(	
+	a := first i;
+	b := last i;     	
+	mubs := toList minUpperBounds(P, a, b);	
 	if #mubs =!= 0 then(
+	    term := (syms#(indexElement(P, a)))*(syms#(indexElement(P,b)));
 	    meet := posetMeet(P, a, b);
 	    m := syms # (indexElement(P,meet#0));
-	    sumUB := sum(apply(mubs, i -> syms#i));
+	    sumUB := sum(apply(mubs, k -> syms#k));
 	    final := term - (m*sumUB);
 	    gensI = gensI | {final};
 	    ) 
@@ -212,9 +212,7 @@ stanleyPosetIdeal Poset := Ideal => P -> (
 	);
     -- These would create the ring A_P (without a tilde.)
     gensI = toList(set(gensI));
-
-    zeroP := minimalElements(P);
-    zeroP = zeroP#0;
+    zeroP := first minimalElements(P);
     zeroVarP := syms # (indexElement(P, zeroP));   
     gensI2 := gensI | {zeroVarP - 1};
         
