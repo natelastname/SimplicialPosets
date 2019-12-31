@@ -37,7 +37,8 @@ export {
     "fromFVector",
     "isSimplicial",
     "isBoolean",
-    "getFVector"
+    "getFVector",
+    "testFVector"
     };
 
 ------------------------------------------
@@ -84,11 +85,26 @@ minUpperBounds = (P, a, b) -> (
     -- minUB is a list of sets. Each element in a set can't be a minimal upper bound.
     if nonminUB == 0 then nonminUB = set();
     (set(allUB) - nonminUB)
-    ); 
+    );
 
 ------------------------------------------
 -- Working with simplicial posets
 ------------------------------------------
+
+-- Tests it according to theorem 2.1 (Stanley 1989.)
+-- Note: there is an additional condition that f_-1 = 1.
+testFVector = method()
+testFVector List := Boolean => fVec -> (
+    
+    if fVec#0 =!= 1 then return false;
+
+    len := length fVec;
+    smallest := for i from 0 to len-1 list(binomial(len-1, i));
+    for i from 0 to len-1 do(
+	if smallest#i > fVec#i then return false;
+	);
+    true
+    );
 
 -- Uses the facts that:
 -- -Every finite boolean algebra is atomic.
@@ -102,33 +118,19 @@ isBoolean Poset := Boolean => P -> (
 -- Returns true if P is simplicial and false otherwise.
 isSimplicial = method()
 isSimplicial Poset := Boolean => P -> (
-        
+    
     -- Not sure if doing this correctly (did we ever write to the cache?)
     --if P.cache.?isSimplicial then return P.cache.isSimplicial;
     
     minP := minimalElements P;
-    if #minP != 1 then error "The poset must have a unique minimal element.";
+    if (#minP) != 1 then return false;
+    
     zeroP := minP#0;    
         
     -- Test that each interval is a boolean algebra.
     for x in vertices(P) do (
 	interval := closedInterval(P, zeroP, x);
     	if not isBoolean(interval) then return false;
-	);
-    true
-    );
-
--- Tests it according to theorem 2.1 (Stanley 1989.)
--- Note: there is an additional condition that f_-1 = 1.
-testFVector = method()
-testFVector List := Boolean => fVec -> (
-    
-    if fVec#0 =!= 1 then return false;
-
-    len := length fVec;
-    smallest := for i from 0 to len-1 list(binomial(len-1, i));
-    for i from 0 to len-1 do(
-	if smallest#i > fVec#i then return false;
 	);
     true
     );
@@ -429,6 +431,7 @@ C = fromFVector({1,3,3,7})
 assert(isSimplicial A)
 assert(isSimplicial B)
 assert(isSimplicial C)
+assert(not isSimplicial chain 5)
 ///
 
 -- fromFVector test
@@ -452,4 +455,37 @@ assert(getFVector(A) == {1,3,3,1})
 assert(getFVector(B) == {1,4,6,4,1})
 ///
 
-end
+
+-- stanleyPosetIdeal test
+TEST ///
+-- Number of tests
+N = 50;
+-- Erdős–Rényi graph parameters 
+n = 5;
+p = 0.5;
+
+for i from 1 to N do(
+    -- Generate an Erdős–Rényi random graph and take the flag complex
+    R := QQ[vars(0..n)];
+    E := select(edges completeGraph(R,n), (e -> random(1.0) < p));
+    G := graph(R,E);
+    C := cliqueComplex(G);
+    -- When P is the face poset of a simplicial complex C, the Stanley 
+    -- poset ideal of P is supposed to be the same as the Stanley-Reisner 
+    -- ideal of C.
+    P := facePoset C;
+    I1 := minimalPresentation stanleyPosetIdeal P;
+    I2 := ideal(C);
+    M := map(ring(I2), ring(I1), vars(ring(I2)));
+    V := vars(ring(I1));
+    assert(I2 == M(I1));
+    );
+///
+
+
+end--
+
+
+restart
+installPackage("SimplicialPosets")
+
