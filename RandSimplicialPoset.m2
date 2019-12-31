@@ -21,22 +21,6 @@ genRelabelTable = (A, B) -> (
     new HashTable from C
     );
 
--- From the Posets package.
--- Given an element "a" of P, returns its index in P.GroundSet.
--- (This index is a's row in P's relation matrix.)
-indexElement = (P, a) -> (
-    j := position(P.GroundSet, i -> i === a);
-    if j === null then error("The element [" | toString a | "] is not in the poset.") else j
-    );
-
-removeRelations = (P, Q) -> (
-    A := set coveringRelations(P);
-    B := set coveringRelations(Q);
-    rels := toList(A-B);
-    gnd := P.GroundSet;
-    poset(gnd,rels)
-    );
-
 -- Returns a hash table for looking up the rank of a vertex in P.
 -- Expects a list formatted like the output of the function rankPoset.
 createRankTable = (ranks) -> (
@@ -46,30 +30,8 @@ createRankTable = (ranks) -> (
     hashTable L
     );
 
--- Returns P, relabeled with a "'" after the end of every vertex. 
-addPrime = P -> (
-    newLabels := (P.GroundSet)/(vert -> 
-	vert => toString(vert)|"'"
-	);
-    newLabels = hashTable(newLabels);
-    labelPoset(P, newLabels)
-    );
--- Returns P, with the vertices in L relabeled by adding the string S to the end.  
-renameVerts = (P, L, S) -> (
-    newLabels := (P.GroundSet)/(vert -> 
-		if member(vert, set(L)) then (
-		    vert => toString(vert)|toString(S)
-		    ) else (
-		    vert => vert
-		    )
-		);
-    newLabels = hashTable newLabels;
-    labelPoset(P, newLabels)
-    );
-
-
 -- Randomly assigns the interval of vert to P.
--- Modifies isUsed appropriately. (TODO: check this.) 
+-- Modifies isUsed appropriately. 
 assignInterval = (P, facet, rankTable, finalRanks, isUsed) -> (
     
     rankFacet := rankTable#facet;
@@ -103,8 +65,7 @@ assignInterval = (P, facet, rankTable, finalRanks, isUsed) -> (
     -------------------------------------------------------------------
     -- Experimental stuff
     -------------------------------------------------------------------
-
-    -- 
+    
     A := subposet(Q, orderIdeal(Q, maximal));
     B := subposet(P, orderIdeal(P, maximal));
     f := isomorphism(A,B);
@@ -194,13 +155,6 @@ load "RandSimplicialPoset.m2"
 P = randFromFVector {1,3,4,2};
 P = randFromFVector {1,5,7,5,2};
 
-
-
-for i in allSteps do(
-    displayPoset(last i, SuppressLabels => false);       
-    );
-
-
 isSimplicial P
 Q = closedInterval(P, 1, 19)
 isBoolean Q
@@ -211,11 +165,3 @@ isBoolean Q
 
 Q = first (allSteps#1)
 displayPoset(Q, SuppressLabels => false)
-
-
-
-isBoolean Q
-length steps 
-
-displayPoset(first (steps#0), SuppressLabels => false)
-displayPoset(first (steps#1), SuppressLabels => false)
