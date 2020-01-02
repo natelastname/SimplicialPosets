@@ -141,7 +141,13 @@ getFVector Poset := List => P ->(
     gfP := rankGeneratingFunction(P);
     (M,C) := coefficients gfP;
     -- The highest coefficient is stored in toList(entries C)#0
-    reverse(apply(toList (entries C), i -> i#0))
+    fVec := reverse(apply(toList (entries C), i -> i#0));
+    
+    for n from 0 to (length fVec)-1 list(
+	k := fVec#n;
+	f := map(ZZ, ring k, (gens ring k)/(i -> i => 1_ZZ));
+	f(k)
+	)
     );
 
 -- Returns a poset that is simplicial with f-vector fVec.
