@@ -253,6 +253,7 @@ doc ///
 	    Thanks to @HREF("http://www-users.math.umn.edu/~reiner/","Victor Reiner")@. This project was his idea.
 ///
 
+-- Example
 doc /// 
     Key
         "Example: Calculating a Stanley simplicial poset ring"
@@ -357,6 +358,29 @@ doc ///
 	    getFVector(P)
 ///
 
+-- testFVector	  
+doc ///
+    Key 
+    	testFVector
+	(testFVector, List)
+    Headline
+    	Tests if it is possible for a simplicial poset to have a given f-vector.
+    Usage
+    	B = testFVector(L)
+    Inputs
+    	L:List
+	    The f-vector to test.
+    Outputs
+    	B:Boolean
+	    Whether a poset with the given f-vector exists.
+    Description
+    	Text		
+    	    See @HREF("https://www.semanticscholar.org/paper/f-vectors-and-h-vectors-of-simplicial-posets-Stanley/2787117152700af2abce3126dd7ba2325685d78b","Stanley's paper")@ for more details about what f-vectors a simplicial poset can have. 
+	    
+	    This is useful for validating the arguments of a function that takes an f-vector.
+    	Example
+	    testFVector({1,4,6,4,1})
+///
 
 -- getFVector
 doc ///
@@ -364,7 +388,7 @@ doc ///
         getFVector
         (getFVector, Poset)
     Headline
-    	Returns the f-vector {f_-1,f_0,...,f_{d-1}} of the given poset.
+    	Returns the f-vector {f_{-1},f_0,...,f_{d-1}} of the given poset.
     Usage
 	L = getFVector(P)
     Inputs
