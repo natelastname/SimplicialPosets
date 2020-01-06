@@ -128,7 +128,7 @@ isSimplicial Poset := Boolean => P -> (
     zeroP := minP#0;    
         
     -- Test that each interval is a boolean algebra.
-    for x in vertices(P) do (
+    for x in maximalElements P do (
 	interval := closedInterval(P, zeroP, x);
     	if not isBoolean(interval) then return false;
 	);
