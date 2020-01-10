@@ -123,7 +123,7 @@ genEdges = (P1, P2, i1, i2, intCliques) -> (
 		
 		A := booleanMinUpperBound(P1, L1);
 		B := booleanMinUpperBound(P2, L2);
-		if A==B then continue; -- This means they're atoms (vertices)		
+		if A==B then continue;	
 		{A,B}
 		);
 	);
@@ -132,17 +132,22 @@ genEdges = (P1, P2, i1, i2, intCliques) -> (
 
 randSimplicialPoset = (n, p1, p2) -> (
     
+    if (p1 < 0) or (p1 > 1) then error "p1 must be a probability.";
+    if (p2 < 0) or (p2 > 1) then error "p2 must be a probability.";
+    
     G := ERModel(n,p1);
     H := ERModel(n,p2);
     -- Note: there is a possible bug in getCliques that makes it return
     -- a subclique of a larger clique in some cases.
-    -- This shouldn't matter for the sake of this program
+    -- This shouldn't matter for the sake of this program, but perhaps I should
+    -- investigate this in the future.
+    
+    print("-- Generating intervals and computing the relation graph...");
     cliques := getCliques G;
     facetIntervals = buildIntervals(cliques);
     relGraphVerts := toList sum for i in facetIntervals list(set(i.GroundSet));
     relGraphEdges := {};
     for S in subsets(0..((length cliques)-1),2) do (
-    	--print("------------------------------------");
 	indexA := first toList S;
 	indexB := last toList S;
 	A := cliques#(indexA);
@@ -150,7 +155,7 @@ randSimplicialPoset = (n, p1, p2) -> (
 	int := set(A)*set(B);
 	
 	if int === set({}) then continue;
-		
+    	
        	intGraph := inducedSubgraph(toGraphsGraph H, (toList int)/(v -> index v));
 	intGraph = toEdgeIdealsGraph intGraph;
         intCliques := getCliques intGraph;
@@ -158,69 +163,51 @@ randSimplicialPoset = (n, p1, p2) -> (
 	if isolated != {} then ( 
 	    intCliques = intCliques | {isolated};
 	    );
-	--print("-- vertices of this pair of cliques:");
-	--print(A);
-	--print(B);
-       	--print("-- Cliques of intersection:");
-	--print(intCliques);
     	newEdges := genEdges(facetIntervals#indexA, facetIntervals#indexB, indexA, indexB, intCliques);	
-     	--print("-- newEdges:");
-	--print(newEdges);
 	relGraphEdges = relGraphEdges | newEdges;
-	
-	
 	);
     
     print("-- Computing connected components of relation graph...");
     relGraph := Graphs$graph(relGraphVerts, relGraphEdges);
+    -- "classes" is guarenteed to be a set partition of relGraph.
     classes := Graphs$connectedComponents(relGraph);
     
-    assert((set flatten classes) === set(vertices relGraph));
-    
-    -- Idea:
-    -- Instead of trying to order the classes, send every vertex of every poset
-    -- the the first member of the list it appears in. Then, we can get our final
-    -- simplicial poset by summing them.
-    
-   print("-- Relabeling the vertices of facetIntervals...");
-   facetIntervals = for interval in facetIntervals list(
-       -- Relabel each interval
-       relabelTable := for vert in interval.GroundSet list(
-	   newVert := vert;
-	   for eqClass in classes do(
-	       if member(vert,set(eqClass)) then (
-		   newVert = first eqClass;
-		   break;
-		   );
-	       );
-	   vert => newVert
-	   );
-       	   labelPoset(interval, hashTable relabelTable)
+    print("-- Relabeling the vertices of facetIntervals...");       
+    -- Send every vertex to the first element of the list "classes" in it appears in.
+    facetIntervals = for interval in facetIntervals list(
+       	relabelTable := for vert in interval.GroundSet list(
+	    newVert := vert;
+	    for eqClass in classes do(
+	       	if member(vert,set(eqClass)) then (
+		    newVert = first eqClass;
+		    break;
+		    );
+	       	);
+	    vert => newVert
+	    );
+       labelPoset(interval, hashTable relabelTable)
        );
     print("-- Giving P the natural labeling...");  
-    P := naturalLabeling sum facetIntervals;
- 
-    print("-- Testing that P is simplicial...");   
-    assert(isSimplicial P);
-    
+    P := naturalLabeling sum facetIntervals;   
     P
     );
 end--
-
 load "randgraphtest.m2"
 n = 10; p1 = 0.5; p2 = 0.75;
-randSimplicialPoset(n,p1,p2)
+n = 5; p1 = 0.5; p2 = 0.75;
+P = fromFVector{1,3,3,2}
+P = randSimplicialPoset(n,p1,p2)
+disp P
 
 
-for i from 1 to 50 do(
-    randSimplicialPoset(n,p1,p2);
+P = randSimplicialPoset(n,0.5,0.75);
+
+
+outputTexPoset(P, "example.tex", SuppressLabels=>false)
+runtimes := for i from 1 to 10 list(
+    print("-- "|toString(i));
+    T := elapsedTiming randSimplicialPoset(n,p1,p2);
+    first T
     )
 
-
-
-for i in facetIntervals do(print(i.GroundSet))
-
-
-
-
-P = last facetIntervals; A = atoms P; booleanMinUpperBound(P, {A#0, A#1, A#2})
+    sum(runtimes)/(length runtimes)
