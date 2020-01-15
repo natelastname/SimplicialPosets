@@ -38,7 +38,8 @@ export {
     "isSimplicial",
     "isBoolean",
     "getFVector",
-    "testFVector"
+    "testFVector",
+    "randSimplicialPoset"
     };
 
 ------------------------------------------
@@ -87,6 +88,87 @@ minUpperBounds = (P, a, b) -> (
     (set(allUB) - nonminUB)
     );
 
+-- Finds the minimum upper bounds of the set L in P when P is a boolean lattice.
+booleanMinUpperBound = (P, L) -> (
+    --upperBound := toString(first L);
+    upperBound := first L;
+    for i from 1 to (length L)-1 do(
+	--upperBound = first toList (minUpperBounds(P, toString(upperBound), toString(L#i)));
+	upperBound = first toList (minUpperBounds(P, upperBound, L#i));
+	upperBound = (P.GroundSet)#upperBound;
+	);
+    upperBound
+    );
+
+-- Erdős–Rényi random graph. Returns an edgeIdeals graph.
+-- (Used by randSimplicialPoset)
+ERModel = (n, p) -> (
+    R := QQ[vars(0..n)];
+    E := select(edges completeGraph(R,n), (e -> random(1.0) < p));
+    graph(R,E)
+    );
+
+buildIntervals = cliques -> (
+    for i from 0 to (length cliques)-1 list(
+	P := booleanLattice (length (cliques#i));
+	atomsP := atoms P;
+	atomNo := 0;
+	zeroP := first (minimalElements P);
+	
+	relabelTable := (P.GroundSet)/(vert -> 
+	    if member(vert, set(atomsP)) then (
+		atomNo = atomNo + 1;
+		vert => (i,toString((cliques#i)#(atomNo-1)))
+	    	) else if vert == zeroP then (
+		zeroP => 0 
+		) else(
+	    	--vert => toString(i)|"|"|vert
+		vert => (i,toString(vert))
+	       	)
+	    );
+        labelPoset(P, hashTable relabelTable)
+	)
+    );
+
+-- Converts an edgeIdeals graph to a Graphs$graph.
+toGraphsGraph = G -> (
+    V := (vertices G)/(vert -> index vert);
+    E := (edges G)/(edge -> {(index first edge), (index last edge)});
+    Graphs$graph(V,E)
+    );
+
+-- Converts a Graphs$graph to an edgeIdeals graph.
+toEdgeIdealsGraph = G -> (
+    V := (vertices G)/(vert -> vars(vert));
+    R := QQ[V];
+    E := (Graphs$edges G)/(edge -> {(vars(first toList edge)), (vars(last toList edge))});
+    E = E/(i -> {(first i)_R, (last i)_R});
+    graph(R,E)
+    );
+
+-- Given the facet intervals of two intersecting cliques and the cliques of their 
+-- intersection, compute the edges to join to the relation graphs.
+genEdges = (P1, P2, i1, i2, intCliques) -> (
+    if intCliques == {} then return {};
+    -- This converts intCliques to the corresponding faces in P1 and P2    
+    newEdges := {};
+    
+    for i from 0 to (length intCliques)-1 do(
+	    clique := intCliques#i;
+    	    newEdges = newEdges | for j in subsets(clique) list(
+		if j == {} then continue;
+		
+		L1 := j/(v -> (i1, toString v));
+		L2 := j/(v -> (i2, toString v));
+		
+		A := booleanMinUpperBound(P1, L1);
+		B := booleanMinUpperBound(P2, L2);
+		if A==B then continue;	
+		{A,B}
+		);
+	);
+    newEdges        
+    );
 ------------------------------------------
 -- Working with simplicial posets
 ------------------------------------------
@@ -227,7 +309,63 @@ stanleyPosetIdeal Poset := Ideal => P -> (
     ideal(gensI2)
     );
 
-
+randSimplicialPoset = method()
+randSimplicialPoset (ZZ, RR, RR) := Poset => (n, p1, p2) -> (
+    
+    if (p1 < 0) or (p1 > 1) then error "p1 must be a probability.";
+    if (p2 < 0) or (p2 > 1) then error "p2 must be a probability.";
+    
+    G := ERModel(n,p1);
+    H := ERModel(n,p2);
+    -- Note: there is a possible bug in getCliques that makes it return
+    -- a subclique of a larger clique in some cases.
+    -- This shouldn't matter for the sake of this program, but perhaps I should
+    -- investigate this in the future.
+    
+    cliques := getCliques G;
+    facetIntervals := buildIntervals(cliques);
+    relGraphVerts := toList sum for i in facetIntervals list(set(i.GroundSet));
+    relGraphEdges := {};
+    for S in subsets(0..((length cliques)-1),2) do (
+	indexA := first toList S;
+	indexB := last toList S;
+	A := cliques#(indexA);
+	B := cliques#(indexB);
+	int := set(A)*set(B);
+	
+	if int === set({}) then continue;
+    	
+       	intGraph := inducedSubgraph(toGraphsGraph H, (toList int)/(v -> index v));
+	intGraph = toEdgeIdealsGraph intGraph;
+        intCliques := getCliques intGraph;
+	isolated := isolatedVertices intGraph;
+	if isolated != {} then ( 
+	    intCliques = intCliques | {isolated};
+	    );
+    	newEdges := genEdges(facetIntervals#indexA, facetIntervals#indexB, indexA, indexB, intCliques);	
+	relGraphEdges = relGraphEdges | newEdges;
+	);
+    
+    relGraph := Graphs$graph(relGraphVerts, relGraphEdges);
+    -- "classes" is guarenteed to be a set partition of relGraph.
+    classes := Graphs$connectedComponents(relGraph);
+    
+    -- Send every vertex to the first element of the list "classes" in it appears in.
+    facetIntervals = for interval in facetIntervals list(
+       	relabelTable := for vert in interval.GroundSet list(
+	    newVert := vert;
+	    for eqClass in classes do(
+	       	if member(vert,set(eqClass)) then (
+		    newVert = eqClass;
+		    break;
+		    );
+	       	);
+	    vert => newVert
+	    );
+       labelPoset(interval, hashTable relabelTable)
+       );
+    sum facetIntervals
+    );
 
 
 beginDocumentation()
@@ -433,6 +571,36 @@ doc ///
 	    SPR := ring(I)/I;
 ///
 
+-- randSimplicialPoset
+doc ///
+    Key
+        randSimplicialPoset
+        (randSimplicialPoset, ZZ, RR, RR)
+    Headline
+    	Returns a random simplcial poset generated with a generalization of the Kahle model for random simplicial complexes.
+    Usage
+	P 
+    Inputs
+        n:ZZ
+            The maximum possible rank of a vertex in the result.
+	p1:RR
+	    The probability parameter of the Erdős–Rényi random graph that determines the facets of the result.
+	p2:RR
+	    The probability parameter of the Erdős–Rényi random graph that determines the intersection complexes of the facets of the result.
+    Outputs
+        P:Poset
+       	    A random simplicial poset.
+    Description
+        Text	    
+	    This function implements a model to generate random simplicial posets based on a generalization of existing models for simplicial complexes.
+	    
+	    The vertex set of the resulting poset is the equivalence class each vertex corresponds to.
+	    
+       	Example
+	    P = randSimplicialPoset(5, 0.75, 0.75);
+	    I = stanleyPosetIdeal(P);
+	    SPR := ring(I)/I;
+///
 
 
 ------------------------------------------
@@ -485,7 +653,6 @@ assert(getFVector(A) == {1,3,3,1})
 assert(getFVector(B) == {1,4,6,4,1})
 ///
 
-
 -- stanleyPosetIdeal test
 TEST ///
 -- Number of tests
@@ -512,9 +679,21 @@ for i from 1 to N do(
     );
 ///
 
+-- randSimplicialPoset test
+TEST ///
+-- Number of tests
+N = 50;
+-- Parameters 
+n = 4;
+p1 = 0.75;
+p2 = 0.75;
+for i from 1 to N do(
+    P = randSimplicialPoset(n,p1,p2);
+    assert(isSimplicial P);
+    );
+///
 
 end--
-
 
 restart
 installPackage("SimplicialPosets")
